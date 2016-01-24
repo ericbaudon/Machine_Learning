@@ -1,0 +1,89 @@
+---
+title: "Practical Machine Learning"
+author: "Eric BAUDON"
+---
+In this report we are going to explain how we build our prediction model using the Train and Test data available for the activity.
+
+#1.Exploratory Analysis
+First we loaded the Train data and split in Training and Testing set.
+```{r}
+Training_data=read.csv("D:/Coursera/Specialisation - Data Science/8.Machine Learning/Project/pml-training.csv")
+library("caret")
+set.seed(12345)
+sample = createDataPartition(Training_data$classe, p = 3/4)[[1]]
+Training = Training_data[sample,]
+Testing = Training_data[-sample,]
+
+```
+
+Then we looked at the structure of Train data with following code
+```{r}
+dim(Training)
+str(Training[1:15])
+```
+We can see that:
+
+- The first 7 columns referres to user and timing. Not very usefull for prediction.
+- The last column [160] is the one with the classe we want to predict. 
+- Then from column 8 to 159 are the predictor (some are factors or integers instead of numercial). 
+
+```{r,warning=FALSE,message=FALSE}
+##Select only predictors
+library("dplyr")
+Training.clean<-select(Training,8:159)
+##Convert all predictors to numerical
+asNumeric <- function(x) as.numeric(as.character(x))
+factorsNumeric <- function(d) modifyList(d, lapply(d[, sapply(d, is.factor)],asNumeric))
+integerNumeric <- function(d) modifyList(d, lapply(d[, sapply(d, is.integer)],asNumeric))
+Training.clean<-integerNumeric(Training.clean)
+Training.clean<-factorsNumeric(Training.clean)
+```
+
+Finally, we can observe that most of predictors in Train set are almost all the time equal to N/A becasue no value was registered. This kind of predictor can't be very usefull and then were eliminated.
+
+```{r,warning=FALSE,message=FALSE,echo=FALSE}
+na_count <-sapply(Training.clean, function(y) sum(length(which(is.na(y)))))
+plot(na_count,main = "NA in each Predictor",xlab="Predictor Index",ylab="Counted NA values" )
+```
+
+```{r,warning=FALSE,message=FALSE}
+Training.clean<-Training.clean[,colSums(is.na(Training.clean))==0]
+Variables<-colnames(Training.clean)## Represent our set of predictors.
+dim(Variables)
+```
+We are now remaining with only 52 predictors which seem to be the important ones for classification.
+
+
+#2.Models creation
+We are going to build 3 prediction models using the training set: "Random Forest"", "Bagging" and "Linear Discrepancy Analysis":
+
+```{r,warning=FALSE,message=FALSE,cache=TRUE}
+library("caret")
+model_rf<-train(Training$classe~., data=Training.clean, method="rf")
+model_gbm<-train(Training$classe~., data=Training.clean, method="gbm")
+model_lda<-train(Training$classe~., data=Training.clean, method="lda")
+```
+
+#3 Model Selection
+We are then going to apply the models on the testing set. First we need to clean the Testing set such as we did for the Training set:
+```{r,warning=FALSE,message=FALSE}
+Testing.clean<-Testing[,Variables] #Select only the predictors defined above.
+Testing.clean<-integerNumeric(Testing.clean)
+Testing.clean<-factorsNumeric(Testing.clean)
+```
+
+Now we can apply our models to the Testing Set and calculate for each one the prediction accuracy.
+```{r,warning=FALSE,message=FALSE}
+pred_rf<-predict(model_rf,Testing.clean)
+pred_gbm<-predict(model_gbm,Testing.clean)
+pred_lda<-predict(model_lda,Testing.clean)
+
+accuracy_rf = sum(pred_rf == Testing$classe) / length(pred_rf)
+accuracy_gbm = sum(pred_gbm == Testing$classe) / length(pred_gbm)
+accuracy_lda = sum(pred_lda == Testing$classe) / length(pred_lda)
+
+results<-data.frame("lda"=accuracy_lda,"gbm"=accuracy_gbm,"rf"=accuracy_rf)
+results
+```
+
+Clearly **Random Forest** is our best model with an accuracy around **99%**. We are going to use this model as our define machine learning model.
