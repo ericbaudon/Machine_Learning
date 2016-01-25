@@ -2,7 +2,7 @@
 title: "Practical Machine Learning"
 author: "Eric BAUDON"
 ---
-In this report we are going to explain how we build our prediction model using the Train and Test data available for the activity.
+In this report we are going to explain how we build our prediction model using the Train data available for the activity.
 
 #1.Exploratory Analysis
 First we loaded the Train data and split in Training and Testing set.
@@ -57,7 +57,14 @@ We are now remaining with only 52 predictors which seem to be the important ones
 #2.Models creation
 We are going to build 3 prediction models using the training set: "Random Forest"", "Bagging" and "Linear Discrepancy Analysis":
 
-```{r,warning=FALSE,message=FALSE,cache=TRUE}
+```{r,warning=FALSE,message=FALSE,cache=TRUE,eval=FALSE}
+library("caret")
+model_rf<-train(Training$classe~., data=Training.clean, method="rf")
+model_gbm<-train(Training$classe~., data=Training.clean, method="gbm")
+model_lda<-train(Training$classe~., data=Training.clean, method="lda")
+```
+
+```{r,warning=FALSE,message=FALSE,cache=TRUE,include=FALSE}
 library("caret")
 model_rf<-train(Training$classe~., data=Training.clean, method="rf")
 model_gbm<-train(Training$classe~., data=Training.clean, method="gbm")
@@ -86,4 +93,4 @@ results<-data.frame("lda"=accuracy_lda,"gbm"=accuracy_gbm,"rf"=accuracy_rf)
 results
 ```
 
-Clearly **Random Forest** is our best model with an accuracy around **99%**. We are going to use this model as our define machine learning model.
+Clearly **Random Forest** is our best model with an accuracy around **99%**.
